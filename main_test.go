@@ -22,7 +22,7 @@ func TestSearchHamlet(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handleSearch(searcher))
+	handler := http.HandlerFunc(handleSearchRequest(searcher))
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -62,7 +62,7 @@ func TestSearchCaseSensitive(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handleSearch(searcher))
+	handler := http.HandlerFunc(handleSearchRequest(searcher))
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -102,7 +102,7 @@ func TestSearchDrunk(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handleSearch(searcher))
+	handler := http.HandlerFunc(handleSearchRequest(searcher))
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
