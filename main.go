@@ -12,6 +12,9 @@ import (
 	"regexp"
 )
 
+const resultWindow = 250
+const maxResults = 20
+
 func main() {
 	searcher := Searcher{}
 	err := searcher.Load("completeworks.txt")
@@ -63,21 +66,23 @@ func handleSearch(searcher Searcher) func(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *Searcher) Load(filename string) error {
+func (searcher *Searcher) Load(filename string) error {
 	dat, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return fmt.Errorf("Load: %w", err)
 	}
-	s.CompleteWorks = string(dat)
-	s.SuffixArray = suffixarray.New(dat)
+	searcher.CompleteWorks = string(dat)
+	searcher.SuffixArray = suffixarray.New(dat)
 	return nil
 }
 
-func (s *Searcher) Search(query string) []string {
-	idxs := s.SuffixArray.FindAllIndex(regexp.MustCompile("(?i)"+query), 20)
-	results := []string{}
-	for _, idx := range idxs {
-		results = append(results, s.CompleteWorks[idx[0]-250:idx[0]+250])
+func (searcher *Searcher) Search(query string) []string {
+	caseInsensitiveSearch := regexp.MustCompile("(?i)" + query)
+	indexesOfFoundOccurrences := searcher.SuffixArray.FindAllIndex(caseInsensitiveSearch, maxResults)
+	var results []string
+	for _, startAndEndIndex := range indexesOfFoundOccurrences {
+		startIndex := startAndEndIndex[0]
+		results = append(results, searcher.CompleteWorks[startIndex-resultWindow:startIndex+resultWindow])
 	}
 	return results
 }
