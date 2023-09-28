@@ -48,7 +48,7 @@ func loadCompleteWorksOfShakespeare() Searcher {
 }
 
 func setUpSearchHandler(searcher Searcher) {
-	http.HandleFunc(urlForSearchFunction, handleSearch(searcher))
+	http.HandleFunc(urlForSearchFunction, handleSearchRequest(searcher))
 
 	port := os.Getenv(environmentVariableForPort)
 	if port == empty {
@@ -72,7 +72,7 @@ type Searcher struct {
 	SuffixArray   *suffixarray.Index
 }
 
-func handleSearch(searcher Searcher) func(responseWriter http.ResponseWriter, request *http.Request) {
+func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWriter, request *http.Request) {
 	return func(responseWriter http.ResponseWriter, request *http.Request) {
 		query, ok := request.URL.Query()[queryUrlParameter]
 		if !ok || len(query[0]) < 1 {
@@ -94,8 +94,8 @@ func handleSearch(searcher Searcher) func(responseWriter http.ResponseWriter, re
 	}
 }
 
-func write(w http.ResponseWriter, bytesToWrite []byte) {
-	_, potentialError := w.Write(bytesToWrite)
+func write(writer http.ResponseWriter, bytesToWrite []byte) {
+	_, potentialError := writer.Write(bytesToWrite)
 	if potentialError != nil {
 		log.Printf(errorMessageWritingFailure, potentialError)
 	}
@@ -114,6 +114,10 @@ func (searcher *Searcher) Load(filename string) error {
 func (searcher *Searcher) Search(query string) []string {
 	caseInsensitiveSearch := regexp.MustCompile(regexForCaseInsensitiveSearch + query)
 	indexesOfFoundOccurrences := searcher.SuffixArray.FindAllIndex(caseInsensitiveSearch, maxResults)
+	return collectResults(indexesOfFoundOccurrences, searcher)
+}
+
+func collectResults(indexesOfFoundOccurrences [][]int, searcher *Searcher) []string {
 	var results []string
 	for _, startAndEndIndex := range indexesOfFoundOccurrences {
 		startIndex := startAndEndIndex[0]
