@@ -33,15 +33,21 @@ const errorMessageWritingFailure = "error writing: %v"
 const errorMessageForLoadFailure = "load: %w"
 
 func main() {
+	searcher := loadCompleteWorksOfShakespeare()
+	setUpFileServer()
+	setUpSearchHandler(searcher)
+}
+
+func loadCompleteWorksOfShakespeare() Searcher {
 	searcher := Searcher{}
 	err := searcher.Load(filenameToSearchIn)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return searcher
+}
 
-	fs := http.FileServer(http.Dir(fileDirectory))
-	http.Handle(basePath, fs)
-
+func setUpSearchHandler(searcher Searcher) {
 	http.HandleFunc(urlForSearchFunction, handleSearch(searcher))
 
 	port := os.Getenv(environmentVariableForPort)
@@ -50,10 +56,15 @@ func main() {
 	}
 
 	fmt.Printf(logMessageForSearchAvailable, port)
-	err = http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func setUpFileServer() {
+	fs := http.FileServer(http.Dir(fileDirectory))
+	http.Handle(basePath, fs)
 }
 
 type Searcher struct {
