@@ -40,9 +40,9 @@ func main() {
 
 func loadCompleteWorksOfShakespeare() Searcher {
 	searcher := Searcher{}
-	err := searcher.Load(filenameToSearchIn)
-	if err != nil {
-		log.Fatal(err)
+	potentialError := searcher.Load(filenameToSearchIn)
+	if potentialError != nil {
+		log.Fatal(potentialError)
 	}
 	return searcher
 }
@@ -56,15 +56,15 @@ func setUpSearchHandler(searcher Searcher) {
 	}
 
 	fmt.Printf(logMessageForSearchAvailable, port)
-	err := http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
-	if err != nil {
-		log.Fatal(err)
+	potentialError := http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
+	if potentialError != nil {
+		log.Fatal(potentialError)
 	}
 }
 
 func setUpFileServer() {
-	fs := http.FileServer(http.Dir(fileDirectory))
-	http.Handle(basePath, fs)
+	fileServer := http.FileServer(http.Dir(fileDirectory))
+	http.Handle(basePath, fileServer)
 }
 
 type Searcher struct {
@@ -72,43 +72,42 @@ type Searcher struct {
 	SuffixArray   *suffixarray.Index
 }
 
-func handleSearch(searcher Searcher) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		query, ok := r.URL.Query()[queryUrlParameter]
+func handleSearch(searcher Searcher) func(responseWriter http.ResponseWriter, request *http.Request) {
+	return func(responseWriter http.ResponseWriter, request *http.Request) {
+		query, ok := request.URL.Query()[queryUrlParameter]
 		if !ok || len(query[0]) < 1 {
-			w.WriteHeader(http.StatusBadRequest)
-			writeWithErrorHandling(w, []byte(errorMessageSearchQueryMissing))
+			responseWriter.WriteHeader(http.StatusBadRequest)
+			write(responseWriter, []byte(errorMessageSearchQueryMissing))
 			return
 		}
 		results := searcher.Search(query[0])
-		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		err := enc.Encode(results)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			writeWithErrorHandling(w, []byte(errorMessageEncodingFailure))
+		buffer := &bytes.Buffer{}
+		encoder := json.NewEncoder(buffer)
+		potentialError := encoder.Encode(results)
+		if potentialError != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			write(responseWriter, []byte(errorMessageEncodingFailure))
 			return
 		}
-		w.Header().Set(contentTypeHeader, contentTypeJson)
-		writeWithErrorHandling(w, buf.Bytes())
+		responseWriter.Header().Set(contentTypeHeader, contentTypeJson)
+		write(responseWriter, buffer.Bytes())
 	}
 }
 
-func writeWithErrorHandling(w http.ResponseWriter, bytesToWrite []byte) {
-	_, err := w.Write(bytesToWrite)
-	if err != nil {
-
-		log.Printf(errorMessageWritingFailure, err)
+func write(w http.ResponseWriter, bytesToWrite []byte) {
+	_, potentialError := w.Write(bytesToWrite)
+	if potentialError != nil {
+		log.Printf(errorMessageWritingFailure, potentialError)
 	}
 }
 
 func (searcher *Searcher) Load(filename string) error {
-	dat, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf(errorMessageForLoadFailure, err)
+	fileContent, potentialError := ioutil.ReadFile(filename)
+	if potentialError != nil {
+		return fmt.Errorf(errorMessageForLoadFailure, potentialError)
 	}
-	searcher.CompleteWorks = string(dat)
-	searcher.SuffixArray = suffixarray.New(dat)
+	searcher.CompleteWorks = string(fileContent)
+	searcher.SuffixArray = suffixarray.New(fileContent)
 	return nil
 }
 
