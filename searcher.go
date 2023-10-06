@@ -27,8 +27,8 @@ func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWri
 
 		existingFromUrl := request.URL.Query()[existingUrlParameter]
 		if len(existingFromUrl) != 0 {
-			potentialExisting, potentialError := strconv.Atoi(existingFromUrl[0])
-			if potentialError != nil {
+			potentialExisting, err := strconv.Atoi(existingFromUrl[0])
+			if err != nil {
 				responseWriter.WriteHeader(http.StatusBadRequest)
 				write(responseWriter, []byte(errorMessageExistingMalformed))
 				return
@@ -39,8 +39,8 @@ func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWri
 		results := searcher.Search(query[0], existing)
 		buffer := &bytes.Buffer{}
 		encoder := json.NewEncoder(buffer)
-		potentialError := encoder.Encode(results)
-		if potentialError != nil {
+		err := encoder.Encode(results)
+		if err != nil {
 			responseWriter.WriteHeader(http.StatusInternalServerError)
 			write(responseWriter, []byte(errorMessageEncodingFailure))
 			return
@@ -51,9 +51,9 @@ func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWri
 }
 
 func write(writer http.ResponseWriter, bytesToWrite []byte) {
-	_, potentialError := writer.Write(bytesToWrite)
-	if potentialError != nil {
-		log.Printf(errorMessageWritingFailure, potentialError)
+	_, err := writer.Write(bytesToWrite)
+	if err != nil {
+		log.Printf(errorMessageWritingFailure, err)
 	}
 }
 

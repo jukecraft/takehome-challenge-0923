@@ -122,13 +122,13 @@ func TestSearchDrunk(t *testing.T) {
 
 func TestSearchWithMoreResults(test *testing.T) {
 	searcher := Searcher{}
-	potentialError := searcher.Load("completeworks.txt")
-	if potentialError != nil {
-		test.Fatal(potentialError)
+	err := searcher.Load("completeworks.txt")
+	if err != nil {
+		test.Fatal(err)
 	}
 
-	results := getResultsFromQuery(test, potentialError, "/search?q=drunk", searcher)
-	moreResults := getResultsFromQuery(test, potentialError, "/search?q=drunk&existing=20", searcher)
+	results := getResultsFromQuery(test, err, "/search?q=drunk", searcher)
+	moreResults := getResultsFromQuery(test, err, "/search?q=drunk&existing=20", searcher)
 
 	if !(len(moreResults) > len(results)) {
 		test.Errorf("expected larger number of results for loading more results for drunk")

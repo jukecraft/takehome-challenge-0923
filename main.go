@@ -39,9 +39,9 @@ func main() {
 
 func loadCompleteWorksOfShakespeare() Searcher {
 	searcher := Searcher{}
-	potentialError := searcher.Load(filenameToSearchIn)
-	if potentialError != nil {
-		log.Fatal(potentialError)
+	err := searcher.Load(filenameToSearchIn)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return searcher
 }
@@ -55,9 +55,9 @@ func setUpSearchHandler(searcher Searcher) {
 	}
 
 	fmt.Printf(logMessageForSearchAvailable, port)
-	potentialError := http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
-	if potentialError != nil {
-		log.Fatal(potentialError)
+	err := http.ListenAndServe(fmt.Sprintf(logMessageForPort, port), nil)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -67,9 +67,9 @@ func setUpFileServer() {
 }
 
 func (searcher *Searcher) Load(filename string) error {
-	fileContent, potentialError := ioutil.ReadFile(filename)
-	if potentialError != nil {
-		return fmt.Errorf(errorMessageForLoadFailure, potentialError)
+	fileContent, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf(errorMessageForLoadFailure, err)
 	}
 	searcher.CompleteWorks = string(fileContent)
 	searcher.SuffixArray = suffixarray.New(fileContent)
