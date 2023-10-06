@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 const fileDirectory = "./static"
@@ -19,15 +20,17 @@ const environmentVariableForPort = "PORT"
 const empty = ""
 const defaultPort = "3001"
 const queryUrlParameter = "q"
+const existingUrlParameter = "existing"
 const contentTypeHeader = "Content-Type"
 const contentTypeJson = "application/json"
 const resultWindow = 250
-const maxResults = 20
+const maxNewResults = 20
 const filenameToSearchIn = "completeworks.txt"
 const regexForCaseInsensitiveSearch = "(?i)"
 const logMessageForSearchAvailable = "shakesearch available at http://localhost:%s..."
 const logMessageForPort = ":%s"
 const errorMessageSearchQueryMissing = "missing search query in URL params"
+const errorMessageExistingMalformed = "expecting existing to be parseable into an integer"
 const errorMessageEncodingFailure = "encoding failure"
 const errorMessageWritingFailure = "error writing: %v"
 const errorMessageForLoadFailure = "load: %w"
@@ -80,7 +83,20 @@ func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWri
 			write(responseWriter, []byte(errorMessageSearchQueryMissing))
 			return
 		}
-		results := searcher.Search(query[0])
+		var existing = 0
+
+		existingFromUrl := request.URL.Query()[existingUrlParameter]
+		if len(existingFromUrl) != 0 {
+			potentialExisting, potentialError := strconv.Atoi(existingFromUrl[0])
+			if potentialError != nil {
+				responseWriter.WriteHeader(http.StatusBadRequest)
+				write(responseWriter, []byte(errorMessageExistingMalformed))
+				return
+			}
+			existing = potentialExisting
+		}
+
+		results := searcher.Search(query[0], existing)
 		buffer := &bytes.Buffer{}
 		encoder := json.NewEncoder(buffer)
 		potentialError := encoder.Encode(results)
@@ -111,15 +127,21 @@ func (searcher *Searcher) Load(filename string) error {
 	return nil
 }
 
-func (searcher *Searcher) Search(query string) []string {
+func (searcher *Searcher) Search(query string, existing int) []string {
 	caseInsensitiveSearch := regexp.MustCompile(regexForCaseInsensitiveSearch + query)
-	indexesOfFoundOccurrences := searcher.SuffixArray.FindAllIndex(caseInsensitiveSearch, maxResults)
-	return collectResults(indexesOfFoundOccurrences, searcher)
+	indexesOfFoundOccurrences := searcher.SuffixArray.FindAllIndex(caseInsensitiveSearch, -1)
+	endIndex := min(len(indexesOfFoundOccurrences), existing+maxNewResults)
+	return collectResults(indexesOfFoundOccurrences[:endIndex], searcher)
 }
-
-func collectResults(indexesOfFoundOccurrences [][]int, searcher *Searcher) []string {
+func min(first, second int) int {
+	if first < second {
+		return first
+	}
+	return second
+}
+func collectResults(indexesToReturn [][]int, searcher *Searcher) []string {
 	var results []string
-	for _, startAndEndIndex := range indexesOfFoundOccurrences {
+	for _, startAndEndIndex := range indexesToReturn {
 		startIndex := startAndEndIndex[0]
 		results = append(results, searcher.CompleteWorks[startIndex-resultWindow:startIndex+resultWindow])
 	}
