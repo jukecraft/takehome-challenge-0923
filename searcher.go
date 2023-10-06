@@ -1,60 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"index/suffixarray"
-	"log"
-	"net/http"
 	"regexp"
-	"strconv"
 )
 
 type Searcher struct {
 	CompleteWorks string
 	SuffixArray   *suffixarray.Index
-}
-
-func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWriter, request *http.Request) {
-	return func(responseWriter http.ResponseWriter, request *http.Request) {
-		query, ok := request.URL.Query()[queryUrlParameter]
-		if !ok || len(query[0]) < 1 {
-			responseWriter.WriteHeader(http.StatusBadRequest)
-			write(responseWriter, []byte(errorMessageSearchQueryMissing))
-			return
-		}
-		var existing = 0
-
-		existingFromUrl := request.URL.Query()[existingUrlParameter]
-		if len(existingFromUrl) != 0 {
-			potentialExisting, err := strconv.Atoi(existingFromUrl[0])
-			if err != nil {
-				responseWriter.WriteHeader(http.StatusBadRequest)
-				write(responseWriter, []byte(errorMessageExistingMalformed))
-				return
-			}
-			existing = potentialExisting
-		}
-
-		results := searcher.Search(query[0], existing)
-		buffer := &bytes.Buffer{}
-		encoder := json.NewEncoder(buffer)
-		err := encoder.Encode(results)
-		if err != nil {
-			responseWriter.WriteHeader(http.StatusInternalServerError)
-			write(responseWriter, []byte(errorMessageEncodingFailure))
-			return
-		}
-		responseWriter.Header().Set(contentTypeHeader, contentTypeJson)
-		write(responseWriter, buffer.Bytes())
-	}
-}
-
-func write(writer http.ResponseWriter, bytesToWrite []byte) {
-	_, err := writer.Write(bytesToWrite)
-	if err != nil {
-		log.Printf(errorMessageWritingFailure, err)
-	}
 }
 
 func min(first, second int) int {
