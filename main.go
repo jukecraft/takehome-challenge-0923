@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"index/suffixarray"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 )
 
 const fileDirectory = "./static"
@@ -70,53 +66,6 @@ func setUpFileServer() {
 	http.Handle(basePath, fileServer)
 }
 
-type Searcher struct {
-	CompleteWorks string
-	SuffixArray   *suffixarray.Index
-}
-
-func handleSearchRequest(searcher Searcher) func(responseWriter http.ResponseWriter, request *http.Request) {
-	return func(responseWriter http.ResponseWriter, request *http.Request) {
-		query, ok := request.URL.Query()[queryUrlParameter]
-		if !ok || len(query[0]) < 1 {
-			responseWriter.WriteHeader(http.StatusBadRequest)
-			write(responseWriter, []byte(errorMessageSearchQueryMissing))
-			return
-		}
-		var existing = 0
-
-		existingFromUrl := request.URL.Query()[existingUrlParameter]
-		if len(existingFromUrl) != 0 {
-			potentialExisting, potentialError := strconv.Atoi(existingFromUrl[0])
-			if potentialError != nil {
-				responseWriter.WriteHeader(http.StatusBadRequest)
-				write(responseWriter, []byte(errorMessageExistingMalformed))
-				return
-			}
-			existing = potentialExisting
-		}
-
-		results := searcher.Search(query[0], existing)
-		buffer := &bytes.Buffer{}
-		encoder := json.NewEncoder(buffer)
-		potentialError := encoder.Encode(results)
-		if potentialError != nil {
-			responseWriter.WriteHeader(http.StatusInternalServerError)
-			write(responseWriter, []byte(errorMessageEncodingFailure))
-			return
-		}
-		responseWriter.Header().Set(contentTypeHeader, contentTypeJson)
-		write(responseWriter, buffer.Bytes())
-	}
-}
-
-func write(writer http.ResponseWriter, bytesToWrite []byte) {
-	_, potentialError := writer.Write(bytesToWrite)
-	if potentialError != nil {
-		log.Printf(errorMessageWritingFailure, potentialError)
-	}
-}
-
 func (searcher *Searcher) Load(filename string) error {
 	fileContent, potentialError := ioutil.ReadFile(filename)
 	if potentialError != nil {
@@ -125,25 +74,4 @@ func (searcher *Searcher) Load(filename string) error {
 	searcher.CompleteWorks = string(fileContent)
 	searcher.SuffixArray = suffixarray.New(fileContent)
 	return nil
-}
-
-func (searcher *Searcher) Search(query string, existing int) []string {
-	caseInsensitiveSearch := regexp.MustCompile(regexForCaseInsensitiveSearch + query)
-	indexesOfFoundOccurrences := searcher.SuffixArray.FindAllIndex(caseInsensitiveSearch, -1)
-	endIndex := min(len(indexesOfFoundOccurrences), existing+maxNewResults)
-	return collectResults(indexesOfFoundOccurrences[:endIndex], searcher)
-}
-func min(first, second int) int {
-	if first < second {
-		return first
-	}
-	return second
-}
-func collectResults(indexesToReturn [][]int, searcher *Searcher) []string {
-	var results []string
-	for _, startAndEndIndex := range indexesToReturn {
-		startIndex := startAndEndIndex[0]
-		results = append(results, searcher.CompleteWorks[startIndex-resultWindow:startIndex+resultWindow])
-	}
-	return results
 }
