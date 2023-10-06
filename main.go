@@ -22,10 +22,7 @@ const queryUrlParameter = "q"
 const existingUrlParameter = "existing"
 const contentTypeHeader = "Content-Type"
 const contentTypeJson = "application/json"
-const resultWindow = 250
-const maxNewResults = 20
 const filenameToSearchIn = "completeworks.txt"
-const regexForCaseInsensitiveSearch = "(?i)"
 
 func main() {
 	searcher := loadCompleteWorksOfShakespeare()

@@ -5,6 +5,10 @@ import (
 	"regexp"
 )
 
+const resultWindow = 250
+const maxNewResults = 20
+const regexForCaseInsensitiveSearch = "(?i)"
+
 type Searcher struct {
 	CompleteWorks string
 	SuffixArray   *suffixarray.Index
